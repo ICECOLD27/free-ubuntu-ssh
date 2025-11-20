@@ -19,10 +19,13 @@ jobs:
           # Start SSH service
           sudo service ssh start
 
-          # Download correct ngrok binary for GitHub runner (x86_64)
+          # Download correct ngrok binary for GitHub runner
           wget -q https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
           unzip -q ngrok-stable-linux-amd64.zip
           chmod +x ngrok
+
+          # Authenticate ngrok
+          ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
           # Start ngrok TCP tunnel for SSH
           ./ngrok tcp 22 --region=us &
