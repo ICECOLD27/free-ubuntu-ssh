@@ -8,24 +8,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Start SSH server
+      - name: Start SSH server with ngrok
         run: |
-          sudo apt update && sudo apt install -y openssh-server wget unzip
-          
+          sudo apt update && sudo apt install -y openssh-server wget unzip jq
+
           # Setup SSH keys
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PUBLIC_KEY }}" >> ~/.ssh/authorized_keys
-          
+
           # Start SSH service
           sudo service ssh start
 
-          # Download ngrok
-          wget -q https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-arm64.zip
-          unzip -q ngrok-stable-linux-arm64.zip
+          # Download correct ngrok binary for GitHub runner (x86_64)
+          wget -q https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip
+          unzip -q ngrok-stable-linux-amd64.zip
+          chmod +x ngrok
 
           # Start ngrok TCP tunnel for SSH
           ./ngrok tcp 22 --region=us &
-          sleep 5
+          sleep 10
 
-          # Show ngrok public address
-          curl --silent http://127.0.0.1:4040/api/tunnels | jq '.tunnels[0].public_url'
+          # Get the public SSH address
+          NGROK_URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+
+          # Convert tcp://host:port to usable SSH command
+          HOST=$(echo $NGROK_URL | cut -d':' -f2 | sed 's@//@@')
+          PORT=$(echo $NGROK_URL | cut -d':' -f3)
+
+          echo "=============================="
+          echo "SSH Command (copy-paste):"
+          echo "ssh -i ~/.ssh/id_ed25519 ubuntu@$HOST -p $PORT"
+          echo "=============================="
